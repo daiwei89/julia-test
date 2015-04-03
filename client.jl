@@ -44,27 +44,18 @@ for i = 1:num_bytes
   A[i] = i % typemax(Uint8)
 end
 
-A = repeat("1", 2^14)
-tic()
 io = IOBuffer()
 write(io, true, int32(num_bytes), A)
+io2 = IOBuffer()
+write(io2, false, int32(num_bytes), A)
+tic()
 for i = 1:num_iters
-  if (i == num_iters)
-    io = IOBuffer()
-    write(io, false, int32(num_bytes), A)
-  end
-  #=
-  io = IOBuffer()
-  if (i == num_iters)
-    #write(io, false, int32(num_bytes), map(hton, A))
-    write(io, false, int32(num_bytes), A)
-  else
-    write(io, true, int32(num_bytes), A)
-  end
-  =#
   ZMQ.send(s, "server_id", SNDMORE)
-  ZMQ.send(s, Message(io))
-  #println("Client done with iter $i")
+  if (i == num_iters)
+    ZMQ.send(s, Message(io2))
+  else
+    ZMQ.send(s, Message(io))
+  end
 end
 # Receive final ack from server.
 sender = bytestring(ZMQ.recv(s))
